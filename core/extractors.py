@@ -16,6 +16,7 @@ class Extractor:
     @staticmethod
     def game_state(res):
         if type(res) != str:
+            print(res)
             res = res.text
         grabber = re.search(r'TribalWars\.updateGameData\((.+?)\);', res)
         if grabber:
@@ -49,7 +50,8 @@ class Extractor:
     def get_quest_rewards(res):
         if type(res) != str:
             res = res.text
-        get_rewards = re.search(r'RewardSystem\.setRewards\(\s*(\[\{.+?\}\]),', res)
+        get_rewards = re.search(
+            r'RewardSystem\.setRewards\(\s*(\[\{.+?\}\]),', res)
         rewards = []
         if get_rewards:
             result = json.loads(get_rewards.group(1), strict=False)
@@ -105,7 +107,8 @@ class Extractor:
         if type(res) != str:
             res = res.text
         res = re.sub('(?s)<table id="units_home".+?</table>', '', res)
-        data = re.findall(r'(?s)<a href="#" class="unit_link" data-unit="(\w+)".+?(\d+)</strong>', res)
+        data = re.findall(
+            r'(?s)<a href="#" class="unit_link" data-unit="(\w+)".+?(\d+)</strong>', res)
         return data
 
     @staticmethod
@@ -129,7 +132,8 @@ class Extractor:
     def village_ids_from_overview(res):
         if type(res) != str:
             res = res.text
-        villages = re.findall(r'<span class="quickedit-vn" data-id="(\d+)"', res)
+        villages = re.findall(
+            r'<span class="quickedit-vn" data-id="(\d+)"', res)
         return list(set(villages))
 
     @staticmethod
@@ -138,7 +142,8 @@ class Extractor:
             res = res.text
         # hide units from other villages
         res = re.sub(r'(?s)<span class="village_anchor.+?</tr>', '', res)
-        data = re.findall(r'(?s)class=\Wunit-item unit-item-([a-z]+)\W.+?(\d+)</td>', res)
+        data = re.findall(
+            r'(?s)class=\Wunit-item unit-item-([a-z]+)\W.+?(\d+)</td>', res)
         return data
 
     @staticmethod
@@ -152,7 +157,8 @@ class Extractor:
     def attack_duration(res):
         if type(res) != str:
             res = res.text
-        data = re.search(r'<span class="relative_time" data-duration="(\d+)"', res)
+        data = re.search(
+            r'<span class="relative_time" data-duration="(\d+)"', res)
         if data:
             return int(data.group(1))
         return 0
