@@ -32,18 +32,21 @@ class BuildingManager:
         self.village_id = village_id
 
     def create_update_links(self, extracted_buildings):
-        link = self.game_state["link_base_pure"] + "main&action=upgrade_building"
+        link = self.game_state["link_base_pure"] + \
+            "main&action=upgrade_building"
 
         for building in extracted_buildings:
             _id = extracted_buildings[building]["id"]
-            _link = link + "&id=" + _id + "&type=main&h=" + self.game_state["csrf"]
+            _link = link + "&id=" + _id + \
+                "&type=main&h=" + self.game_state["csrf"]
 
             extracted_buildings[building]["build_link"] = _link
 
         return extracted_buildings
 
     def start_update(self, build=False, set_village_name=None):
-        main_data = self.wrapper.get_action(village_id=self.village_id, action="main")
+        main_data = self.wrapper.get_action(
+            village_id=self.village_id, action="main")
         self.game_state = Extractor.game_state(main_data)
         vname = self.game_state["village"]["name"]
 
@@ -78,7 +81,8 @@ class BuildingManager:
             self.waits_building = []
         if self.is_queued():
             self.logger.info(
-                "No build operation was executed: queue full, %d left" % len(self.queue)
+                "No build operation was executed: queue full, %d left" % len(
+                    self.queue)
             )
             return False
         if not build:
@@ -109,7 +113,8 @@ class BuildingManager:
                 )
                 return False
         # Check for instant build after putting something in the queue
-        main_data = self.wrapper.get_action(village_id=self.village_id, action="main")
+        main_data = self.wrapper.get_action(
+            village_id=self.village_id, action="main")
         if self.complete_actions(main_data.text):
             self.can_build_three_min = True
             return self.start_update(build=build, set_village_name=set_village_name)
@@ -124,7 +129,8 @@ class BuildingManager:
                 "game.php?village=%s&screen=main&ajaxaction=build_order_reduce&h=%s&id=%s&destroy=0"
                 % (self.village_id, self.wrapper.last_h, res.group(1))
             )
-            self.logger.debug("Quick build action was completed, re-running function")
+            self.logger.debug(
+                "Quick build action was completed, re-running function")
             return result
         return False
 
@@ -159,7 +165,7 @@ class BuildingManager:
             if (
                 len(self.queue)
                 and "storage"
-                not in [x.split(":")[0] for x in self.queue[0 : self.max_lookahead]]
+                not in [x.split(":")[0] for x in self.queue[0: self.max_lookahead]]
                 and int(self.levels["storage"]) != 30
             ):
                 self.queue.insert(0, build_data)
@@ -174,14 +180,16 @@ class BuildingManager:
             r = False
         if build_item["stone"] > self.game_state["village"]["stone"]:
             req = build_item["stone"] - self.game_state["village"]["stone"]
-            self.resman.request(source="building", resource="stone", amount=req)
+            self.resman.request(source="building",
+                                resource="stone", amount=req)
             r = False
         if build_item["iron"] > self.game_state["village"]["iron"]:
             req = build_item["iron"] - self.game_state["village"]["iron"]
             self.resman.request(source="building", resource="iron", amount=req)
             r = False
         if build_item["pop"] > (
-            self.game_state["village"]["pop_max"] - self.game_state["village"]["pop"]
+            self.game_state["village"]["pop_max"] -
+                self.game_state["village"]["pop"]
         ):
             req = build_item["pop"] - (
                 self.game_state["village"]["pop_max"]
@@ -210,12 +218,14 @@ class BuildingManager:
 
     def get_next_building_action(self, index=0):
         if index >= self.max_lookahead:
-            self.logger.debug("Not building anything because insufficient resources")
+            self.logger.debug(
+                "Not building anything because insufficient resources")
             return False
 
         queue_check = self.is_queued()
         if queue_check:
-            self.logger.debug("Not building because of queued items: %s" % self.waits)
+            self.logger.debug(
+                "Not building because of queued items: %s" % self.waits)
             return False
 
         if self.resman and self.resman.in_need_of("pop"):
@@ -223,11 +233,12 @@ class BuildingManager:
             if (
                 len(self.queue)
                 and "farm"
-                not in [x.split(":")[0] for x in self.queue[0 : self.max_lookahead]]
+                not in [x.split(":")[0] for x in self.queue[0: self.max_lookahead]]
                 and int(self.levels["farm"]) != 30
             ):
                 self.queue.insert(0, build_data)
-                self.logger.info("Adding farm in front of queue because low on pop")
+                self.logger.info(
+                    "Adding farm in front of queue because low on pop")
                 return self.get_next_building_action(0)
 
         if len(self.queue):
@@ -238,7 +249,8 @@ class BuildingManager:
                 self.queue.pop(index)
                 return self.get_next_building_action(index=index)
             if entry not in self.costs:
-                self.logger.debug("Ignoring %s because not yet available" % entry)
+                self.logger.debug(
+                    "Ignoring %s because not yet available" % entry)
                 return self.get_next_building_action(index + 1)
             check = self.costs[entry]
             if "max_level" in check and min_lvl > check["max_level"]:
@@ -270,7 +282,8 @@ class BuildingManager:
                     ),
                 )
                 self.levels[entry] += 1
-                result = self.wrapper.get_url(check["build_link"].replace("amp;", ""))
+                result = self.wrapper.get_url(
+                    check["build_link"].replace("amp;", ""))
                 if self.can_build_three_min:
                     # Wait some random time
                     time.sleep(random.randint(3, 7) / 10)
@@ -280,8 +293,9 @@ class BuildingManager:
                         self.queue.pop(0)
                         index -= 1
                     # Building was completed, queueing another
-                self.game_state = Extractor.game_state(result)
-                self.costs = Extractor.building_data(result)
+                if result != False:
+                    self.game_state = Extractor.game_state(result)
+                    self.costs = Extractor.building_data(result)
                 # Trigger function again because game state is changed
                 self.costs = self.create_update_links(self.costs)
                 if self.resman and "building" in self.resman.requested:
